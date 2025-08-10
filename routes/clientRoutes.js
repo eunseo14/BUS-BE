@@ -6,6 +6,6 @@ const clientController = require('../controllers/clientController');
 router.get('/busLane', clientController.getBusLane);
 
 // 목적지 설정
-// router.post('/destination', clientController.setDestination);
+router.post('/destination', clientController.setDestination);
 
 module.exports = router;
