@@ -1,8 +1,8 @@
-require('dotenv').config();
-const axios = require('axios');
+require("dotenv").config();
+const axios = require("axios");
 
 const ODSAY_API_KEY = process.env.ODSAY_API_KEY;
-const ODSAY_API_BASE_URL = 'https://api.odsay.com/v1/api';
+const ODSAY_API_BASE_URL = "https://api.odsay.com/v1/api";
 
 /**
  * 버스 번호로 Odsay API에서 노선 ID를 찾고, 상세 노선 정보를 반환
@@ -20,11 +20,17 @@ async function getBusLaneByNumber(lang, busNo, cityCode) {
         apiKey: ODSAY_API_KEY,
         busNo: busNo,
         CID: cityCode, // 도시 코드
-      }
+      },
     });
 
-    if (!searchRes.data.result || !searchRes.data.result.lane || searchRes.data.result.lane.length === 0) {
-      throw new Error(`"${busNo}"번 버스를 찾을 수 없습니다.`);
+    if (searchRes.data.result.lane[0]?.busNo !== busNo) {
+      return {
+        status: 400,
+        body: {
+          success: false,
+          message: `버스 번호를 정확히 입력해주세요! (예: ${searchRes.data.result.lane[0].busNo})`,
+        },
+      };
     }
 
     const busID = searchRes.data.result.lane[0].busID; // 노선 ID
@@ -36,13 +42,19 @@ async function getBusLaneByNumber(lang, busNo, cityCode) {
         apiKey: ODSAY_API_KEY,
         busID: busID,
         lang: lang,
-      }
+      },
     });
 
     return detailRes.data;
   } catch (error) {
-    console.error('Odsay API 호출 오류:', error.message);
-    throw error;
+    console.error("Odsay API 호출 오류:", error.message);
+    return {
+        status: 400,
+        body: {
+          success: false,
+          message: '버스 번호를 정확히 입력해주세요!',
+        },
+      };
   }
 }
 
