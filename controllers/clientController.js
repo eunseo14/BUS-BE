@@ -2,7 +2,7 @@ const { getBusLaneByNumber } = require("../services/odsayService");
 
 exports.getBusLane = async (req, res) => {
   const { lang, busNo, cityCode } = req.query;
-
+  
   if (!busNo) {
     return res.status(200).json({
       status: 400,
@@ -16,7 +16,7 @@ exports.getBusLane = async (req, res) => {
   try {
     const result = await getBusLaneByNumber(
       parseInt(lang),
-      busNo,
+      busNo.trim(),
       parseInt(cityCode)
     );
     if (result?.status === 400) {
