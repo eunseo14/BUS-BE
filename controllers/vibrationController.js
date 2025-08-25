@@ -1,19 +1,10 @@
 const { getDistanceFromLatLonInMeters } = require('../services/mathService');
 const { getLatestLocation, getDestination } = require('./deviceController');
+const { getState, setLatestLocation,  resetPrevFlowFlags } = require('../services/geoState');
 
 let vibrationPoint = null;   // FE에서 설정한 거리 (m)
 
-// FE에서 진동 포인트 설정
-const setVibrationPoint = (req, res) => {
-  const { vibrationDistance } = req.body;
-  if (typeof vibrationDistance === 'undefined') {
-    return res.status(400).json({ error: "vibrationDistance required" });
-  }
-  vibrationPoint = Number(vibrationDistance);
-  res.json({ ok: true, message: "Vibration point set", vibrationPoint });
-};
-
-// ESP32/FE에서 진동 여부 조회
+// ESP32에서 진동 여부 조회
 const getVibrationStatus = (req, res) => {
   const destination = getDestination();
   const latestLocation = getLatestLocation();
@@ -27,15 +18,18 @@ const getVibrationStatus = (req, res) => {
     destination.lat, destination.lng
   );
 
-  const vibrate = distDest <= vibrationPoint;
+  const vibrationMeter = getDistanceFromLatLonInMeters(
+    vibrationPoint.lat, vibrationPoint.lng,
+    destination.lat, destination.lng
+  );
+
+
+  const vibrate = distDest <= vibrationMeter;
   res.json({
-    vibrate,  
-    distanceToDestination: Math.round(distDest),
-    vibrationPoint
+    vibrate
   });
 };
 
 module.exports = {
-  setVibrationPoint,
   getVibrationStatus,
 };

@@ -1,4 +1,8 @@
 const { getBusLaneByNumber } = require("../services/odsayService");
+const {
+  setAll,
+  resetPrevFlowFlags,
+} = require('../services/geoState');
 
 exports.getBusLane = async (req, res) => {
   const { lang, busNo, cityCode } = req.query;
@@ -29,8 +33,31 @@ exports.getBusLane = async (req, res) => {
 };
 
 exports.setDestination = (req, res) => {
-  const { destinationLng, destinationLat } = req.body;
-  console.log(destinationLng, destinationLat);
+  const {
+    destination: { lng: destLng, lat: destLat },
+    prevStation: { lng: prevLng, lat: prevLat },
+    vibrationPoint: { lng: vibLng, lat: vibLat },
+  } = req.body;
+
+  if (!destination || !prevStation || !vibrationPoint) {
+    return res.status(400).json({
+      error: "destination / prevStation / vibrationPoint 모두 필요합니다.",
+    });
+  }
+
+  console.log(destLng, destLat, prevLng, prevLat, vibLng, vibLat);
+
+  const norm = ({ lat, lng }) => ({ lat: Number(lat), lng: Number(lng) });
+
+  setAll({
+    destination: norm(destination),
+    prevStation: norm(prevStation),
+    vibrationPoint: norm(vibrationPoint),
+  });
+
+  // 전 정류장 흐름 플래그 초기화
+  resetPrevFlowFlags();
+
   return res.status(200).json({
     status: 200,
     body: {
@@ -39,3 +66,4 @@ exports.setDestination = (req, res) => {
     },
   });
 };
+
