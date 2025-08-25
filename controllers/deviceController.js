@@ -1,6 +1,7 @@
 const { getDistanceFromLatLonInMeters } = require('../services/mathService');
 const { getState, setLatestLocation,  resetPrevFlowFlags } = require('../services/geoState');
 
+<<<<<<< HEAD
 // ===== 설정값 =====
 const PREV_RADIUS_M = 30;   // 전 정류장 판정용 반경
 const EXIT_HOLD_MS  = 3000; // 탈출 지속 시간 3초
@@ -16,6 +17,12 @@ function distToDestinationMeters(lat, lng) {
   if (!state.destination) return Infinity;
   return getDistanceFromLatLonInMeters(lat, lng, destination.lat, destination.lng);
 }
+=======
+//강남역 근처 좌표
+const destination = { lat: 37.4979, lng: 127.0276 };
+
+let latestLocation = { lat: 37.4977, lng: 127.0275 };
+>>>>>>> 4f40cf5c14310ae9cdeb7ea2753299febb3a786f
 
 // ========= 상태머신 업데이트 =========
 function updateprevStationState(nowMs, lat, lng) {
@@ -48,6 +55,7 @@ function updateprevStationState(nowMs, lat, lng) {
 // ========= 위치 수신 =========
 const postLocation = (req, res) => {
   const { lat, lng } = req.body;
+<<<<<<< HEAD
 
   if (typeof lat === 'undefined' || typeof lng === 'undefined') {
     return res.status(400).json({ error: "lat/lng required" });
@@ -59,7 +67,13 @@ const postLocation = (req, res) => {
   const nowMs = Date.now();
   updateprevStationState(nowMs, loc.lat, loc.lng);
   console.log(loc);
+=======
+  if (!lat || !lng) return res.status(400).json({ error: "lat/lng required" });
+
+  latestLocation = { lat, lng };
+>>>>>>> 4f40cf5c14310ae9cdeb7ea2753299febb3a786f
   res.json({ message: "Location received!" });
+  console.log(latestLocation);
 };
 
 // ========= LED(목적지 50m) =========
@@ -70,9 +84,20 @@ const getLedStatus = (req, res) => {
     return res.json({ led: false, distance: null });
   }
 
+<<<<<<< HEAD
   const distance = distToDestinationMeters(latestLocation.lat, latestLocation.lng);
   const isNear = distance <= 50;
   res.json({ led: isNear, distance: Math.round(distance) });
+=======
+  const distance = getDistanceFromLatLonInMeters(
+    latestLocation.lat, latestLocation.lng,
+    destination.lat, destination.lng
+  );
+  console.log(distance);
+  const isNear = distance <= 100;
+  console.log(isNear);
+  res.json({ led: isNear });
+>>>>>>> 4f40cf5c14310ae9cdeb7ea2753299febb3a786f
 };
 
 // ========= 전 정류장 통과 상태 조회 + 도착지 50m =========
