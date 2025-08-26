@@ -1,13 +1,10 @@
 const { getDistanceFromLatLonInMeters } = require('../services/mathService');
-const { getLatestLocation, getDestination } = require('./deviceController');
-const { getState, setLatestLocation,  resetPrevFlowFlags } = require('../services/geoState');
+const { getState, resetAll } = require('../services/geoState');
 
-let vibrationPoint = null;   // FE에서 설정한 거리 (m)
-
-// ESP32에서 진동 여부 조회
+// ESP32: 진동 여부 조회 (목적지에 가까워지면 자동으로 true)
 const getVibrationStatus = (req, res) => {
-  const destination = getDestination();
-  const latestLocation = getLatestLocation();
+  const st = getState();
+  const { destination, latestLocation, vibrationPoint } = st;
 
   if (!destination || !latestLocation || !vibrationPoint) {
     return res.json({ vibrate: false });
@@ -17,19 +14,22 @@ const getVibrationStatus = (req, res) => {
     latestLocation.lat, latestLocation.lng,
     destination.lat, destination.lng
   );
-
   const vibrationMeter = getDistanceFromLatLonInMeters(
     vibrationPoint.lat, vibrationPoint.lng,
     destination.lat, destination.lng
   );
 
-
   const vibrate = distDest <= vibrationMeter;
-  res.json({
-    vibrate
-  });
+  return res.json({ vibrate });
+};
+
+// 프론트: "진동 멈춤" 요청 → 즉시 끄고 리셋 
+const stopVibration = (req, res) => {
+  resetAll();
+  return res.status(200).json({ success: true, message: '진동 중단 및 state 리셋 완료' });
 };
 
 module.exports = {
   getVibrationStatus,
+  stopVibration,
 };
