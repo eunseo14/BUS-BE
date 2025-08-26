@@ -1,4 +1,3 @@
-// controllers/deviceController.js
 const { getDistanceFromLatLonInMeters } = require('../services/mathService');
 const {
   getState, setLatestLocation, resetPrevFlowFlags, resetAll, consumeForceLed

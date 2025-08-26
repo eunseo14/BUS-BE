@@ -1,4 +1,3 @@
-// routes/deviceRoutes.js
 const express = require('express');
 const router = express.Router();
 const { postLocation, getLedStatus } = require('../controllers/deviceController');

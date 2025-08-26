@@ -1,4 +1,3 @@
-// controllers/clientController.js
 const { getBusLaneByNumber } = require("../services/odsayService");
 const { setAll, resetPrevFlowFlags } = require('../services/geoState');
 

@@ -1,4 +1,3 @@
-// services/geoState.js
 const state = {
   destination: null,     // { lat, lng }
   prevStation: null,     // { lat, lng }
