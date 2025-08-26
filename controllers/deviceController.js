@@ -1,50 +1,43 @@
+// controllers/deviceController.js
 const { getDistanceFromLatLonInMeters } = require('../services/mathService');
-const { getState, setLatestLocation,  resetPrevFlowFlags } = require('../services/geoState');
+const {
+  getState, setLatestLocation, resetPrevFlowFlags, resetAll, consumeForceLed
+} = require('../services/geoState');
 
-<<<<<<< HEAD
-// ===== 설정값 =====
-const PREV_RADIUS_M = 30;   // 전 정류장 판정용 반경
-const EXIT_HOLD_MS  = 3000; // 탈출 지속 시간 3초
+// 설정값
+const PREV_RADIUS_M = 30;   // 전정류장 판정 반경
+const EXIT_HOLD_MS  = 3000; // 탈출 유지 시간
+const DEST_NEAR_M   = 50;   // 목적지 근접(LED) 기준
 
-// ========= 유틸: 거리 계산 =========
+// 유틸
 function distToPrevStationMeters(lat, lng) {
-  const state = getState();
-  if (!state.prevStation) return Infinity;
+  const { prevStation } = getState();
+  if (!prevStation) return Infinity;
   return getDistanceFromLatLonInMeters(lat, lng, prevStation.lat, prevStation.lng);
 }
 function distToDestinationMeters(lat, lng) {
-  const state = getState();
-  if (!state.destination) return Infinity;
+  const { destination } = getState();
+  if (!destination) return Infinity;
   return getDistanceFromLatLonInMeters(lat, lng, destination.lat, destination.lng);
 }
-=======
-//강남역 근처 좌표
-const destination = { lat: 37.4979, lng: 127.0276 };
 
-let latestLocation = { lat: 37.4977, lng: 127.0275 };
->>>>>>> 4f40cf5c14310ae9cdeb7ea2753299febb3a786f
-
-// ========= 상태머신 업데이트 =========
-function updateprevStationState(nowMs, lat, lng) {
+// 전정류장 상태 업데이트
+function updatePrevStationState(nowMs, lat, lng) {
   const state = getState();
-
   if (!state.prevStation) return;
 
   const d = distToPrevStationMeters(lat, lng);
   const isInside = d <= PREV_RADIUS_M;
 
-// 진입이벤트
   if (!state.geofenceInside && isInside) {
     state.geofenceInside = true;
     state.enteredOnce = true;
-    state.lastExitTimeMs = null; //진입 시 탈출 타이머 초기화
+    state.lastExitTimeMs = null;
   }
-  // 탈출이벤트
   if (state.geofenceInside && !isInside) {
     state.geofenceInside = false;
     state.lastExitTimeMs = nowMs;
   }
-  // 탈출 유지 3초 이상 => 전 정류장 통과 확정!!!!
   if (!isInside && state.enteredOnce && !state.prevPassed && state.lastExitTimeMs) {
     if (nowMs - state.lastExitTimeMs >= EXIT_HOLD_MS) {
       state.prevPassed = true;
@@ -52,89 +45,46 @@ function updateprevStationState(nowMs, lat, lng) {
   }
 }
 
-// ========= 위치 수신 =========
+// 위치 수신 (ESP32 → 서버)
 const postLocation = (req, res) => {
-  const { lat, lng } = req.body;
-<<<<<<< HEAD
-
+  const { lat, lng } = req.body || {};
   if (typeof lat === 'undefined' || typeof lng === 'undefined') {
-    return res.status(400).json({ error: "lat/lng required" });
+    return res.status(400).json({ error: 'lat/lng required' });
   }
 
-  const loc = { lat: Number(lat), lng: Number(lng) };
-  setLatestLocation(loc);
+  setLatestLocation({ lat, lng });
 
-  const nowMs = Date.now();
-  updateprevStationState(nowMs, loc.lat, loc.lng);
-  console.log(loc);
-=======
-  if (!lat || !lng) return res.status(400).json({ error: "lat/lng required" });
+  const state = getState();
+  updatePrevStationState(Date.now(), state.latestLocation.lat, state.latestLocation.lng);
 
-  latestLocation = { lat, lng };
->>>>>>> 4f40cf5c14310ae9cdeb7ea2753299febb3a786f
-  res.json({ message: "Location received!" });
-  console.log(latestLocation);
+  return res.json({ message: 'Location received!' });
 };
 
-// ========= LED(목적지 50m) =========
+// LED 상태 (ESP32 ← 서버)
 const getLedStatus = (req, res) => {
-  const { latestLocation, destination } = getState();
-  
-  if (!latestLocation || !destination) {
+  // ✅ 즉시하차/자동하차에서 한 번만 true 주는 원-샷
+  if (consumeForceLed()) {
+    return res.json({ led: true, reason: 'oneshot' });
+  }
+
+  const state = getState();
+  if (!state.latestLocation || !state.destination) {
     return res.json({ led: false, distance: null });
   }
 
-<<<<<<< HEAD
-  const distance = distToDestinationMeters(latestLocation.lat, latestLocation.lng);
-  const isNear = distance <= 50;
-  res.json({ led: isNear, distance: Math.round(distance) });
-=======
-  const distance = getDistanceFromLatLonInMeters(
-    latestLocation.lat, latestLocation.lng,
-    destination.lat, destination.lng
-  );
-  console.log(distance);
-  const isNear = distance <= 100;
-  console.log(isNear);
-  res.json({ led: isNear });
->>>>>>> 4f40cf5c14310ae9cdeb7ea2753299febb3a786f
-};
+  const distance = distToDestinationMeters(state.latestLocation.lat, state.latestLocation.lng);
+  const isNear = distance <= DEST_NEAR_M;
 
-// ========= 전 정류장 통과 상태 조회 + 도착지 50m =========
-const getprevStationStatus = (req, res) => {
-  const state = getState();
-  
-  // inside 여부 (30m 반경 안에 있는지)
-  let inside = false;
-  if (state.latestLocation) {
-    inside = distToPrevStationMeters(state.latestLocation.lat, state.latestLocation.lng) <= PREV_RADIUS_M;
+  // ✅ 자동 하차벨: 전정류장 통과 + 목적지 근접 → LED ON 한번 & 리셋
+  if (state.prevPassed && isNear) {
+    resetAll();            // 상태 초기화
+    return res.json({ led: true, reason: 'auto' });
   }
 
-  // 도착지 거리 (50m 이내인지)
-  let destinationNear = false;
-  if (state.latestLocation) {
-    const distDest = distToDestinationMeters(state.latestLocation.lat, state.latestLocation.lng);
-    destinationNear = distDest <= 50;
-  }
-
-  // ✅ 이중 검증: 전정류장 통과 + 도착지 50m 이내
-  const led = state.prevPassed && destinationNear;
-
-  res.json({
-    led    // 최종 LED 신호
-  });
-};
-
-
-// ========= 필요 시 초기화 =========
-const resetprevStationState = (req, res) => {
-  resetPrevFlowFlags();
-  res.json({ ok: true, message: "prevStation state reset" });
+  return res.json({ led: false, distance: Math.round(distance) });
 };
 
 module.exports = {
   postLocation,
   getLedStatus,
-  getprevStationStatus,
-  resetprevStationState,
 };
