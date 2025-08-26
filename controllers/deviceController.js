@@ -75,8 +75,7 @@ const getLedStatus = (req, res) => {
   const isNear = distance <= DEST_NEAR_M;
 
   // ✅ 자동 하차벨: 전정류장 통과 + 목적지 근접 → LED ON 한번 & 리셋
-  if (state.prevPassed && isNear) {
-    resetAll();            // 상태 초기화
+  if (state.prevPassed && isNear) {       
     return res.json({ led: true, reason: 'auto' });
   }
 
